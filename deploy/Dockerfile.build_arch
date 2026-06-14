@@ -1,0 +1,29 @@
+FROM archlinux:latest
+
+# Update system and install base development and packaging dependencies
+RUN pacman -Syu --noconfirm --needed \
+    base-devel \
+    git \
+    python-build \
+    python-installer \
+    python-setuptools \
+    python-wheel \
+    libinih \
+    python-pyqt6 \
+    python-yaml \
+    python-argcomplete \
+    python-darkdetect \
+    dkms \
+    sudo \
+    python-pip
+
+# Create builder user with passwordless sudo access (makepkg cannot run as root)
+RUN useradd -m builder && \
+    echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# Set working directory and ownership
+WORKDIR /build
+RUN chown builder:builder /build
+
+# Switch to the builder user
+USER builder

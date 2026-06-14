@@ -1,0 +1,103 @@
+# Maintainer: LenovoLegionLinux Contributors
+
+_pkgname=lenovolegionlinux
+pkgname=${_pkgname}
+pkgver=1.0.0  # Will be updated by pkgver()
+pkgrel=1
+pkgdesc="LenovoLegionLinux (LLL) - All-in-one package: DKMS driver, C daemon, systemd services, and CLI/GUI tools"
+arch=("x86_64")
+url="https://github.com/johnfanv2/LenovoLegionLinux"
+license=('GPL')
+depends=(
+  python-argcomplete
+  python-yaml
+  python-pyqt6
+  polkit
+  python-darkdetect
+  dkms
+)
+makedepends=(
+  git
+  python-build
+  python-installer
+  python-setuptools
+  python-wheel
+  libinih
+)
+provides=('lenovolegionlinux-git' 'lenovolegionlinux-dkms-git')
+conflicts=('lenovolegionlinux-git' 'lenovolegionlinux-dkms-git')
+install="lenovolegionlinux.install"
+
+pkgver() {
+  cd "${startdir}/../.."
+  if git rev-parse --git-dir > /dev/null 2>&1; then
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+  else
+    echo "1.0.0"
+  fi
+}
+
+prepare() {
+  # Create a clean build source copy in srcdir
+  rm -rf "${srcdir}/lenovolegionlinux"
+  mkdir -p "${srcdir}/lenovolegionlinux"
+  cp -r "${startdir}/../../kernel_module" "${srcdir}/lenovolegionlinux/"
+  cp -r "${startdir}/../../python" "${srcdir}/lenovolegionlinux/"
+  cp -r "${startdir}/../../extra" "${srcdir}/lenovolegionlinux/"
+  cp -r "${startdir}/../../deploy" "${srcdir}/lenovolegionlinux/"
+  
+  # Replace _VERSION in setup.cfg with pkgver
+  local clean_ver=$(echo "${pkgver}" | sed 's/[^0-9.]*//g')
+  if [ -z "${clean_ver}" ]; then
+    clean_ver="1.0.0"
+  fi
+  sed -i "s/version = _VERSION/version = ${clean_ver}/g" "${srcdir}/lenovolegionlinux/python/legion_linux/setup.cfg"
+  
+  # Set version in dkms.conf
+  sed -i "s/DKMS_VERSION/${clean_ver}/g" "${srcdir}/lenovolegionlinux/kernel_module/dkms.conf"
+}
+
+build() {
+  # Build python wheel
+  cd "${srcdir}/lenovolegionlinux/python/legion_linux"
+  python -m build --wheel --no-isolation
+  
+  # Build C daemon
+  cd "${srcdir}/lenovolegionlinux/extra/service/legiond"
+  make
+}
+
+package() {
+  # 1. Install python tools
+  cd "${srcdir}/lenovolegionlinux/python/legion_linux"
+  python -m installer --destdir="${pkgdir}" dist/*.whl
+  
+  # 2. Install C daemon
+  install -Dm755 "${srcdir}/lenovolegionlinux/extra/service/legiond/legiond" "${pkgdir}/usr/bin/legiond"
+  install -Dm755 "${srcdir}/lenovolegionlinux/extra/service/legiond/legiond-ctl" "${pkgdir}/usr/bin/legiond-ctl"
+  
+  # 3. Install systemd files (services and timers)
+  cd "${srcdir}/lenovolegionlinux/extra"
+  install -Dm644 service/*.service -t "${pkgdir}/usr/lib/systemd/system/"
+  install -Dm644 service/*.timer -t "${pkgdir}/usr/lib/systemd/system/"
+  
+  # 4. Install DKMS module source
+  local clean_ver=$(echo "${pkgver}" | sed 's/[^0-9.]*//g')
+  if [ -z "${clean_ver}" ]; then
+    clean_ver="1.0.0"
+  fi
+  local dkms_src_dir="${pkgdir}/usr/src/lenovolegionlinux-${clean_ver}"
+  install -Dm644 "${srcdir}/lenovolegionlinux/kernel_module/dkms.conf" "${dkms_src_dir}/dkms.conf"
+  install -Dm644 "${srcdir}/lenovolegionlinux/kernel_module/Makefile" "${dkms_src_dir}/Makefile"
+  install -Dm644 "${srcdir}/lenovolegionlinux/kernel_module/legion-laptop.c" "${dkms_src_dir}/legion-laptop.c"
+  install -Dm644 "${srcdir}/lenovolegionlinux/kernel_module/legion-laptop-unused-snippets.c" "${dkms_src_dir}/legion-laptop-unused-snippets.c"
+  install -Dm755 "${srcdir}/lenovolegionlinux/kernel_module/issue-warning.sh" "${dkms_src_dir}/issue-warning.sh"
+  
+  # 5. Install Pacman hook
+  install -Dm644 "${srcdir}/lenovolegionlinux/deploy/LenovoLegionLinux.hook" "${pkgdir}/usr/share/libalpm/hooks/lenovolegionlinux.hook"
+  # Update target in hook to match our package name
+  sed -i 's/lenovolegionlinux-dkms-git/lenovolegionlinux/g' "${pkgdir}/usr/share/libalpm/hooks/lenovolegionlinux.hook"
+  
+  # 6. Install rebuild helper script
+  install -Dm755 "${srcdir}/lenovolegionlinux/deploy/LenovoLegionLinux" "${pkgdir}/usr/bin/LenovoLegionLinux"
+}

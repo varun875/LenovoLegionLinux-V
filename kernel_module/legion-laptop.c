@@ -1554,22 +1554,25 @@ static const char *get_model_acpi_path(const struct model_config *model, enum ac
 	return default_acpi_paths[id];
 }
 
-// function from ideapad-laptop.c
 static int eval_int(struct acpi_device *adev, const char *name, unsigned long *res)
 {
 	unsigned long long result;
 	acpi_status status;
 	acpi_handle handle;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
-	status = acpi_get_handle(NULL, (char *)name, &handle);
-	if (ACPI_FAILURE(status))
-		return -EIO;
+	if (adev) {
+		handle = adev->handle;
+	} else {
+		status = acpi_get_handle(NULL, (char *)name, &handle);
+		if (ACPI_FAILURE(status))
+			return -EIO;
+	}
 #else
 	if (!adev)
 		return -ENODEV;
 	handle = adev->handle;
 #endif
-	status = acpi_evaluate_integer(handle, (char *)name, NULL, &result);
+	status = acpi_evaluate_integer(handle, adev ? (char *)name : NULL, NULL, &result);
 	if (ACPI_FAILURE(status))
 		return -EIO;
 
@@ -1585,16 +1588,32 @@ static int exec_simple_method(struct acpi_device *adev, const char *name,
 	acpi_handle handle;
 	acpi_status status;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
-	status = acpi_get_handle(NULL, (char *)name, &handle);
-	if (ACPI_FAILURE(status))
-		return -EIO;
+	if (adev) {
+		handle = adev->handle;
+	} else {
+		status = acpi_get_handle(NULL, (char *)name, &handle);
+		if (ACPI_FAILURE(status))
+			return -EIO;
+	}
 #else
 	if (!adev)
 		return -ENODEV;
 	handle = adev->handle;
 #endif
-	status =
-		acpi_execute_simple_method(handle, (char *)name, arg);
+	if (adev) {
+		status = acpi_execute_simple_method(handle, (char *)name, arg);
+	} else {
+		union acpi_object arg_obj;
+		struct acpi_object_list arg_list;
+
+		arg_obj.type = ACPI_TYPE_INTEGER;
+		arg_obj.integer.value = arg;
+
+		arg_list.count = 1;
+		arg_list.pointer = &arg_obj;
+
+		status = acpi_evaluate_object(handle, NULL, &arg_list, NULL);
+	}
 
 	return ACPI_FAILURE(status) ? -EIO : 0;
 }
@@ -6260,6 +6279,14 @@ static void legion_hwmon_exit(struct legion_private *priv)
 
 /* ACPI*/
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
+static acpi_status find_ec_companion(acpi_handle handle, u32 level, void *context, void **retval)
+{
+	*retval = handle;
+	return AE_CTRL_TERMINATE;
+}
+#endif
+
 static int acpi_init(struct legion_private *priv, struct acpi_device *adev)
 {
 	int err;
@@ -6268,11 +6295,23 @@ static int acpi_init(struct legion_private *priv, struct acpi_device *adev)
 	struct device *dev = &priv->platform_device->dev;
 	const char *acpi_path;
 
-	acpi_path = get_model_acpi_path(_model, ACPI_PATH_WRITE_RAPIDCHARGE);
 	priv->adev = adev;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
+	if (!priv->adev) {
+		void *found_handle = NULL;
+		acpi_get_devices("PNP0C09", find_ec_companion, NULL, &found_handle);
+		if (found_handle) {
+			struct acpi_device *ec_dev = acpi_fetch_acpi_dev(found_handle);
+			if (ec_dev) {
+				priv->adev = ec_dev;
+				dev_info(dev, "Found EC ACPI device via PNP0C09 lookup\n");
+			}
+		}
+	}
+#endif
 	if (!priv->adev)
 		dev_info(dev, "No ACPI handle, will use FQN paths\n");
-	skip_acpi_sta_check = force || (!priv->conf->acpi_check_dev);
+	skip_acpi_sta_check = force || (!priv->conf->acpi_check_dev) || (!priv->adev);
 	if (!skip_acpi_sta_check) {
 		acpi_path = get_model_acpi_path(_model, ACPI_PATH_STA);
 		err = eval_int(priv->adev, acpi_path, &cfg);
@@ -6544,13 +6583,13 @@ static int legion_add(struct platform_device *pdev)
 	_model = priv->conf;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(7, 0, 0)
 	err = acpi_init(priv, ACPI_COMPANION(&pdev->dev));
+#else
+	err = acpi_init(priv, NULL);
+#endif
 	if (err) {
 		dev_info(&pdev->dev, "Could not init ACPI access: %d\n", err);
 		goto err_acpi_init;
 	}
-#else
-	err = acpi_init(priv, NULL);
-#endif
 	// TODO: remove; only used for reverse engineering
 	pr_info("Creating RAM access to embedded controller\n");
 	err = ecram_memoryio_init(&priv->ec_memoryio,
@@ -6752,12 +6791,13 @@ static struct platform_driver legion_driver = {
 	},
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
+static struct platform_device *legion_pdev;
+#endif
+
 static int __init legion_init(void)
 {
 	int err;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
-	static struct platform_device *legion_pdev;
-#endif
 	pr_info("Loading legion_laptop\n");
 	err = platform_driver_register(&legion_driver);
 	if (err) {
@@ -6781,7 +6821,8 @@ static void __exit legion_exit(void)
 {
 	platform_driver_unregister(&legion_driver);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 0, 0)
-	platform_device_unregister(_priv.platform_device);
+	if (legion_pdev)
+		platform_device_unregister(legion_pdev);
 #endif
 	pr_info("legion_laptop exit\n");
 }
