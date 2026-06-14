@@ -15,6 +15,7 @@ depends=(
   polkit
   python-darkdetect
   dkms
+  python-pillow
 )
 makedepends=(
   git
