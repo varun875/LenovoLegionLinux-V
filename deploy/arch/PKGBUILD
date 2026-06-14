@@ -44,7 +44,10 @@ prepare() {
   cp -r "${startdir}/../../kernel_module" "${srcdir}/lenovolegionlinux/"
   cp -r "${startdir}/../../python" "${srcdir}/lenovolegionlinux/"
   cp -r "${startdir}/../../extra" "${srcdir}/lenovolegionlinux/"
-  cp -r "${startdir}/../../deploy" "${srcdir}/lenovolegionlinux/"
+  mkdir -p "${srcdir}/lenovolegionlinux/deploy"
+  cp "${startdir}/../LenovoLegionLinux.hook" "${srcdir}/lenovolegionlinux/deploy/"
+  cp "${startdir}/../LenovoLegionLinux" "${srcdir}/lenovolegionlinux/deploy/"
+
   
   # Replace _VERSION in setup.cfg with pkgver
   local clean_ver=$(echo "${pkgver}" | sed 's/[^0-9.]*//g')
