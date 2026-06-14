@@ -368,6 +368,7 @@ class EnumFeatureTrayController:
 
     def update_view_from_feature(self, connect=False):
         log.info("update_view_from_feature in EnumFeatureTrayController ")
+        values = []
         try:
             if self.feature.exists():
                 # possible values -> items
@@ -1706,6 +1707,16 @@ def main():
     QGuiApplication.setDesktopFileName("legion_gui.desktop")
 
     app = QApplication(sys.argv)
+
+    # Load and apply Fluent Dark stylesheet
+    qss_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "fluent_dark.qss")
+    if os.path.exists(qss_path):
+        try:
+            with open(qss_path, "r", encoding="utf-8") as f:
+                app.setStyleSheet(f.read())
+            log.info("Successfully applied Fluent Dark QSS theme.")
+        except Exception as e:
+            log.error(f"Error loading theme stylesheet: {e}")
 
     use_legion_cli_to_write = '--use_legion_cli_to_write' in sys.argv
     do_not_excpect_hwmon = True

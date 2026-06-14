@@ -1,0 +1,162 @@
+/* Fluent Windows 11 Dark Theme for Legion GUI */
+QMainWindow {
+    background-color: #1e1e1f;
+    font-family: "Segoe UI Variable Text", "Segoe UI", "Segoe WP", "Helvetica Neue", sans-serif;
+}
+
+QWidget {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Tabs styling */
+QTabWidget::pane {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: #242426;
+    border-radius: 8px;
+    margin-top: -1px;
+}
+
+QTabBar::tab {
+    background-color: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 8px 16px;
+    margin-right: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+}
+
+QTabBar::tab:hover {
+    color: rgba(255, 255, 255, 0.85);
+    background-color: rgba(255, 255, 255, 0.04);
+    border-radius: 4px;
+}
+
+QTabBar::tab:selected {
+    color: #60cdff;
+    border-bottom: 2px solid #60cdff;
+    font-weight: 600;
+}
+
+/* ScrollArea */
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+
+/* Scrollbars */
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(255, 255, 255, 0.20);
+    min-height: 24px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* GroupBox as modern Card */
+QGroupBox {
+    background-color: #2d2d30;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    color: #ffffff;
+    margin-top: 16px;
+    padding-top: 24px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    top: -4px;
+    padding: 0 4px;
+    color: #60cdff;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #2d2d30;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.20);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QPushButton:hover {
+    background-color: #353538;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+QPushButton:pressed {
+    background-color: #202022;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+QPushButton:disabled {
+    background-color: rgba(255, 255, 255, 0.02);
+    color: rgba(255, 255, 255, 0.3);
+    border-color: transparent;
+}
+
+/* Input Fields (Spinbox, LineEdit, ComboBox) */
+QLineEdit, QSpinBox, QComboBox {
+    background-color: #202022;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    padding: 4px 8px;
+    selection-background-color: #0078d4;
+}
+
+QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
+    border-bottom: 2px solid #60cdff;
+    background-color: #18181a;
+}
+
+/* CheckBox styling */
+QCheckBox {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: #202022;
+}
+
+QCheckBox::indicator:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+QCheckBox::indicator:checked {
+    background-color: #60cdff;
+    border-color: #60cdff;
+}
+
+/* Labels */
+QLabel {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+}
